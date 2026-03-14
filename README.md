@@ -2,12 +2,12 @@
 
 A TypeScript adapter + OpenClaw plugin for building **Runway-powered character workflows**.
 
-This project helps you turn a simple character idea — or an uploaded character document — into a reusable live avatar pipeline:
+This project helps you turn a simple character idea — and, in the future, uploaded character documents — into a reusable live avatar pipeline:
 
 - 🧠 structured character profiles
-- 📚 knowledge ingestion from pasted text, local files, or uploaded attachments
+- 📚 knowledge ingestion from pasted text and local files
 - ⚡ one-shot character creation from knowledge sources
-- 🔗 OpenClaw attachment bridge (`MediaPath` / `MediaPaths` → `attachmentPaths`)
+- 🔮 future-ready OpenClaw attachment bridge (`MediaPath` / `MediaPaths` → `attachmentPaths`) for when WebChat/Control UI supports document uploads
 - 🖼️ consistent character image generation
 - 🎭 visual continuity across generations
 - 🗣️ live avatar creation
@@ -22,7 +22,7 @@ This repo connects **OpenClaw** with **Runway character workflows**.
 
 At a high level, it lets you:
 
-1. ingest character knowledge from text, attachments, or files
+1. ingest character knowledge from text and files
 2. define or create a character profile from that knowledge
 3. generate images of that character
 4. keep the character visually consistent
@@ -42,7 +42,7 @@ Knowledge Source → Character Profile → Character Image → Live Avatar → R
 This project is useful if you want to:
 
 * build reusable AI characters inside OpenClaw
-* turn uploaded PDFs, DOCX files, markdown notes, or pasted lore into character profiles
+* turn pasted lore, markdown notes, text files, PDFs, or DOCX documents into character profiles
 * generate consistent visual identities for characters
 * experiment with live avatars and realtime sessions
 * test the full flow locally in a browser
@@ -125,12 +125,15 @@ Here is the normal end-to-end flow:
 
 ### 0. Ingest knowledge
 
-Start with any of these:
+Current supported product flow:
 
-* pasted character notes
+* pasted character notes directly in chat
+* local markdown / text / JSON files through the adapter or API
+* PDF or DOCX character documents through the adapter or API
+
+Future planned OpenClaw flow:
+
 * uploaded attachments from OpenClaw WebChat / Control UI
-* local markdown / text / JSON files
-* PDF or DOCX character documents
 
 Then normalize that source into a structured profile draft or create the character directly.
 
@@ -216,7 +219,53 @@ Main tool groups:
 * live avatar tools
 * realtime session tools
 
-OpenClaw upload workflow:
+Current OpenClaw chat workflow (works today):
+
+1. User pastes character notes directly into the chat box
+2. The agent maps that content to `sourceText`
+3. The agent calls either:
+   * `ingest_character_knowledge` for draft/review mode
+   * `create_character_from_knowledge` for immediate creation
+
+Example prompts that work today:
+
+* `根据这段内容创建角色`
+* `先提取这段设定里的角色信息`
+* `把我刚发的角色描述整理成 character profile`
+
+### End-to-end example: pasted text → create character
+
+1. The user pastes character notes into chat
+2. The user says:
+
+```text
+根据这段内容创建角色
+```
+
+3. The agent maps the message into:
+
+```json
+{
+  "sourceText": "姓名: 林雾\n外观概述: 黑色短发，琥珀色眼睛，深色长风衣。"
+}
+```
+
+4. The agent calls:
+
+```text
+create_character_from_knowledge
+```
+
+5. The expected reply shape is:
+   - `已根据这段设定创建角色 林雾`
+   - `character id: char_xxx`
+   - `下一步可以生成角色图或继续微调 profile`
+
+### Planned future OpenClaw upload workflow
+
+This repository is already prepared for a future OpenClaw file-upload flow.
+
+When OpenClaw WebChat / Control UI supports document uploads, the intended bridge is:
 
 1. User uploads a document in WebChat / Control UI
 2. OpenClaw exposes that upload as media context (`MediaPath`, `MediaPaths`, `MediaUrl`, `MediaUrls`)
@@ -225,92 +274,11 @@ OpenClaw upload workflow:
    * `ingest_character_knowledge` for draft/review mode
    * `create_character_from_knowledge` for immediate creation
 
-Example prompts:
+Future example prompts:
 
 * `根据这个文件创建角色`
 * `先提取这个附件里的角色信息`
 * `用上传的 PDF 生成 Runway character`
-
-### Last-mile attachment workflow
-
-To make attachment uploads behave like a native user flow in OpenClaw, use this decision rule in the agent layer:
-
-1. If the user uploaded a file and asks to **create** a character:
-   - map `MediaPath` / `MediaPaths` to `attachmentPaths`
-   - call `create_character_from_knowledge`
-2. If the user uploaded a file and asks to **extract / preview / review** first:
-   - map `MediaPath` / `MediaPaths` to `attachmentPaths`
-   - call `ingest_character_knowledge`
-3. If no attachment exists but the user pasted character notes:
-   - map that text to `sourceText`
-4. If both attachment and text exist:
-   - prefer the attachment as the primary knowledge source unless the user explicitly says the pasted text should override it
-
-Expected user-visible result:
-
-- acknowledge the uploaded file was used
-- say whether a draft was extracted or a character was created
-- return the character name and id when creation succeeds
-- suggest the next step, usually `generate_character_image` or `update_character_profile`
-
-### End-to-end example: upload → create character
-
-Example user flow in OpenClaw WebChat / Control UI:
-
-1. The user uploads `character-notes.pdf`
-2. OpenClaw exposes that upload as `MediaPath` or `MediaPaths`
-3. The user says:
-
-```text
-根据这个文件创建角色
-```
-
-4. The agent maps the upload into:
-
-```json
-{
-  "attachmentPaths": ["/tmp/openclaw/uploads/character-notes.pdf"]
-}
-```
-
-5. The agent calls:
-
-```text
-create_character_from_knowledge
-```
-
-6. The expected reply shape is:
-   - `已根据上传文件创建角色 林雾`
-   - `character id: char_xxx`
-   - `下一步可以生成角色图或继续微调 profile`
-
-### End-to-end example: upload → extract draft only
-
-1. The user uploads `character-notes.docx`
-2. The user says:
-
-```text
-先提取这个附件里的角色信息，不要创建
-```
-
-3. The agent maps the upload into:
-
-```json
-{
-  "attachmentPaths": ["/tmp/openclaw/uploads/character-notes.docx"]
-}
-```
-
-4. The agent calls:
-
-```text
-ingest_character_knowledge
-```
-
-5. The expected reply shape is:
-   - `已从上传文档提取角色草稿`
-   - `识别到姓名 / 外观 / 服装 / 风格标签等字段`
-   - `如果你确认无误，我可以继续创建 character`
 
 Best if you want **OpenClaw agents to drive the workflow**.
 
