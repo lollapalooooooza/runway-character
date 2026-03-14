@@ -231,6 +231,28 @@ Example prompts:
 * `先提取这个附件里的角色信息`
 * `用上传的 PDF 生成 Runway character`
 
+### Last-mile attachment workflow
+
+To make attachment uploads behave like a native user flow in OpenClaw, use this decision rule in the agent layer:
+
+1. If the user uploaded a file and asks to **create** a character:
+   - map `MediaPath` / `MediaPaths` to `attachmentPaths`
+   - call `create_character_from_knowledge`
+2. If the user uploaded a file and asks to **extract / preview / review** first:
+   - map `MediaPath` / `MediaPaths` to `attachmentPaths`
+   - call `ingest_character_knowledge`
+3. If no attachment exists but the user pasted character notes:
+   - map that text to `sourceText`
+4. If both attachment and text exist:
+   - prefer the attachment as the primary knowledge source unless the user explicitly says the pasted text should override it
+
+Expected user-visible result:
+
+- acknowledge the uploaded file was used
+- say whether a draft was extracted or a character was created
+- return the character name and id when creation succeeds
+- suggest the next step, usually `generate_character_image` or `update_character_profile`
+
 Best if you want **OpenClaw agents to drive the workflow**.
 
 ---
