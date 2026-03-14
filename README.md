@@ -48,7 +48,43 @@ Use one of the tested avatar IDs:
 
 ## How to Use
 
-This project can be used in **three main ways**.
+### Using Runway Character through OpenClaw
+
+The simplest way to think about this project is:
+
+- you give OpenClaw a character idea
+- OpenClaw creates a reusable character profile
+- OpenClaw can generate images of that character
+- OpenClaw can keep the character visually consistent across multiple generations
+- OpenClaw can turn the character into a live avatar
+- OpenClaw can create a realtime session for a live video call
+
+In plain language, the workflow usually looks like this:
+
+1. **Create a character**
+   - Give the character a name and visual identity
+   - Example: hair, eyes, clothing, style, mood
+
+2. **Generate the character image**
+   - Ask for a portrait or scene of that character
+   - The system returns a generation job, then the final asset
+
+3. **Refine continuity**
+   - Reuse the same character profile and references
+   - Generate more images while preserving identity
+
+4. **Create a live avatar**
+   - Use one of the generated character images as the avatar reference
+   - Add a personality and voice preset
+
+5. **Start a live session**
+   - Create a realtime session for that avatar
+   - Wait until it is ready
+   - Consume credentials and connect a frontend client
+
+So if you are using this through OpenClaw, the mental model is very simple:
+
+> **Character profile → generated image → live avatar → realtime session**
 
 ### 1. As an OpenClaw plugin
 Use the registered tools inside OpenClaw agents.
@@ -140,6 +176,200 @@ http://localhost:4318
 | `get_realtime_session` | `sessionId` | `session.id`, `session.status`, `sessionKey` when available |
 | `wait_for_realtime_session` | `sessionId`, `timeoutMs`, `pollIntervalMs`, `maxAttempts` | final `session`, `attempts`, READY / terminal state |
 | `consume_realtime_session` | `sessionId` | `credentials.url`, `credentials.token`, `credentials.roomName`, `credentials.sessionId` |
+
+---
+
+## JSON Examples
+
+### 1. `create_character_profile`
+
+#### Example input
+
+```json
+{
+  "name": "Ava Sterling",
+  "visualSummary": "short black hair, amber eyes, tailored coat",
+  "hair": "short black hair",
+  "face": "amber eyes",
+  "wardrobe": ["tailored coat"],
+  "styleTags": ["cinematic", "clean portrait"],
+  "continuityNotes": [
+    "Keep the amber eyes and tailored coat consistent."
+  ]
+}
+```
+
+#### Example output
+
+```json
+{
+  "ok": true,
+  "toolName": "create_character_profile",
+  "data": {
+    "character": {
+      "id": "char_xxx",
+      "name": "Ava Sterling",
+      "slug": "ava-sterling",
+      "visualSummary": "short black hair, amber eyes, tailored coat"
+    },
+    "characterSummary": {
+      "id": "char_xxx",
+      "name": "Ava Sterling",
+      "referenceImageCount": 0
+    }
+  }
+}
+```
+
+### 2. `generate_character_image`
+
+#### Example input
+
+```json
+{
+  "characterId": "char_xxx",
+  "prompt": "Ava Sterling portrait, short black hair, amber eyes, tailored coat, cinematic realistic character portrait",
+  "aspectRatio": "16:9",
+  "framing": "medium close-up",
+  "lighting": "soft cinematic lighting",
+  "mood": "composed"
+}
+```
+
+#### Example output
+
+```json
+{
+  "ok": true,
+  "toolName": "generate_character_image",
+  "data": {
+    "job": {
+      "id": "job_xxx",
+      "providerJobId": "provider_task_xxx",
+      "status": "queued"
+    },
+    "assets": []
+  }
+}
+```
+
+### 3. `wait_for_generation_job`
+
+#### Example input
+
+```json
+{
+  "jobId": "job_xxx",
+  "timeoutMs": 120000,
+  "pollIntervalMs": 3000,
+  "maxAttempts": 50
+}
+```
+
+#### Example output
+
+```json
+{
+  "ok": true,
+  "toolName": "wait_for_generation_job",
+  "data": {
+    "job": {
+      "id": "job_xxx",
+      "status": "succeeded"
+    },
+    "assets": [
+      {
+        "id": "asset_xxx",
+        "outputUrl": "https://..."
+      }
+    ],
+    "attempts": 4
+  }
+}
+```
+
+### 4. `create_live_avatar`
+
+#### Example input
+
+```json
+{
+  "name": "Ava Live",
+  "referenceImage": "https://...generated-character-image.png",
+  "personality": "You are Ava, calm, sharp, concise, and helpful in live conversation.",
+  "voicePresetId": "clara",
+  "startScript": "Hi, I am Ava. How can I help?"
+}
+```
+
+#### Example output
+
+```json
+{
+  "ok": true,
+  "toolName": "create_live_avatar",
+  "data": {
+    "avatar": {
+      "id": "avatar_xxx",
+      "name": "Ava Live",
+      "status": "PROCESSING",
+      "referenceImageUri": "https://..."
+    }
+  }
+}
+```
+
+### 5. `create_realtime_session`
+
+#### Example input
+
+```json
+{
+  "avatarId": "avatar_xxx"
+}
+```
+
+#### Example output
+
+```json
+{
+  "ok": true,
+  "toolName": "create_realtime_session",
+  "data": {
+    "session": {
+      "id": "session_xxx",
+      "avatarId": "avatar_xxx"
+    }
+  }
+}
+```
+
+### 6. `consume_realtime_session`
+
+#### Example input
+
+```json
+{
+  "sessionId": "session_xxx"
+}
+```
+
+#### Example output
+
+```json
+{
+  "ok": true,
+  "toolName": "consume_realtime_session",
+  "data": {
+    "credentials": {
+      "url": "wss://...",
+      "token": "...",
+      "roomName": "session_xxx",
+      "sessionId": "session_xxx"
+    }
+  }
+}
+```
 
 ---
 
