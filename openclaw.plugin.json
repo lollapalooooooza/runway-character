@@ -1,0 +1,77 @@
+{
+  "id": "runway-character",
+  "name": "Runway Character",
+  "description": "Character workflow tools for Runway-style image/video generation, continuity, and storyboard orchestration.",
+  "version": "0.1.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "apiKey": {
+        "type": "string"
+      },
+      "apiKeyEnvVar": {
+        "type": "string",
+        "default": "RUNWAY_API_KEY"
+      },
+      "baseUrl": {
+        "type": "string",
+        "default": "https://api.runwayml.com/v1"
+      },
+      "timeoutMs": {
+        "type": "integer",
+        "minimum": 1,
+        "default": 30000
+      },
+      "maxRetries": {
+        "type": "integer",
+        "minimum": 0,
+        "default": 3
+      },
+      "pollIntervalMs": {
+        "type": "integer",
+        "minimum": 0,
+        "default": 2000
+      },
+      "defaultAspectRatio": {
+        "type": "string",
+        "default": "16:9"
+      },
+      "dataRootDir": {
+        "type": "string",
+        "default": "./data"
+      },
+      "debug": {
+        "type": "boolean",
+        "default": false
+      },
+      "useLocalStore": {
+        "type": "boolean",
+        "default": true
+      },
+      "optionalTools": {
+        "type": "boolean",
+        "default": true
+      }
+    }
+  },
+  "uiHints": {
+    "apiKey": {
+      "label": "Runway API Key",
+      "placeholder": "Paste your Runway API key",
+      "sensitive": true
+    },
+    "apiKeyEnvVar": {
+      "label": "API key env var",
+      "placeholder": "RUNWAY_API_KEY"
+    },
+    "baseUrl": {
+      "label": "Base URL",
+      "placeholder": "https://api.runwayml.com/v1"
+    },
+    "dataRootDir": {
+      "label": "Data root",
+      "placeholder": "./data"
+    }
+  }
+}

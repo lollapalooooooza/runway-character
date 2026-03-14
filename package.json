@@ -1,0 +1,58 @@
+{
+  "name": "runway-character",
+  "version": "0.1.0",
+  "description": "Production-style OpenClaw tool and workflow adapter for Runway character generation workflows.",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "bin": {
+    "runway-smoke": "./dist/src/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./plugin": {
+      "import": "./dist/src/plugin.js"
+    },
+    "./cli": {
+      "import": "./dist/src/cli.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    ".env.example",
+    "openclaw.plugin.json"
+  ],
+  "scripts": {
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepack": "npm run build",
+    "smoke:help": "node dist/src/cli.js --help"
+  },
+  "keywords": [
+    "openclaw",
+    "runway",
+    "character-workflows",
+    "tool-adapter",
+    "plugin-bridge",
+    "typescript"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "openclaw": {
+    "extensions": [
+      "./dist/src/plugin.js"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
