@@ -8,38 +8,36 @@ OpenClaw plugin + TypeScript adapter for building **Runway-powered character wor
 - realtime session orchestration
 - local browser demo for live calls
 
+---
+
 ## Quick start
 
+Clone the repository and install dependencies:
+
 ```bash
-cd "/Users/bryanwen/Documents/New project"
+git clone https://github.com/lollapalooooooza/runway-character.git
+cd runway-character
 npm install
 npm run build
+```
+
+Run tests:
+
+```bash
+npm test
+```
+
+Start the local live demo:
+
+```bash
 node demo-live/server.mjs
 ```
 
-Open:
+Open in your browser:
 
 ```text
 http://localhost:4318
 ```
-
-Use one of the tested avatar IDs:
-
-- `05adb9d7-2a4f-4456-9b75-fcc074481c85` → Ava
-- `f61f196d-7595-4308-809e-f2feb365a30c` → Iris
-
----
-
-A production-style OpenClaw plugin and adapter for **Runway character workflows**, including:
-
-- character profile management
-- image generation
-- reference-based continuity
-- asynchronous job polling
-- generated asset storage and download
-- live avatar creation
-- realtime session creation and consumption
-- a minimal local live-call demo
 
 ---
 
@@ -92,45 +90,191 @@ This repo has moved well beyond a skeleton.
 
 ---
 
-## Tested results
+## How to use
 
-## Ava live flow
-Confirmed working end to end:
+You can use this project in **three ways**:
 
-- live avatar creation
-- avatar readiness polling
-- realtime session creation
-- realtime session readiness polling
-- credential consumption
+### 1. As an OpenClaw plugin
+The plugin registers tools that OpenClaw agents can call directly.
 
-### Ava avatar
-- Avatar ID: `05adb9d7-2a4f-4456-9b75-fcc074481c85`
+### 2. As a local TypeScript adapter
+You can import the adapter in Node/TypeScript and call tools programmatically.
+
+### 3. As a local demo
+You can run the included browser demo to validate realtime avatar calls visually.
 
 ---
 
-## Iris flow (fresh prompt retest)
-A completely new character prompt was generated and the full pipeline succeeded again.
+## Primary workflows
 
-### Character prompt
-- Name: `Iris Vale Live Test`
-- Visual summary: `dark auburn bob, pale green eyes, structured cream blazer`
-- Image prompt:
+## A. Character image workflow
 
-```text
-Editorial portrait of Iris Vale, dark auburn bob, pale green eyes, structured cream blazer, calm intelligent expression, soft studio light
+### Input
+Typical input for a character image flow:
+
+- character name
+- visual summary
+- optional hair / face / wardrobe anchors
+- optional continuity notes
+- prompt
+- framing
+- lighting
+- mood
+- aspect ratio
+
+### Example input
+
+```json
+{
+  "name": "Iris Vale",
+  "visualSummary": "dark auburn bob, pale green eyes, structured cream blazer",
+  "hair": "dark auburn bob",
+  "face": "pale green eyes",
+  "wardrobe": ["structured cream blazer"]
+}
 ```
 
-### Result
-- Character ID: `char_162bef65979844e3a27df8d336edf69e`
-- Generated image job succeeded
-- Live avatar was created and reached `READY`
-- Realtime session was created and reached `READY`
-- Session credentials were consumed successfully
+Then image generation:
 
-### Iris live avatar
-- Avatar ID: `f61f196d-7595-4308-809e-f2feb365a30c`
+```json
+{
+  "characterId": "char_xxx",
+  "prompt": "Editorial portrait of Iris Vale, dark auburn bob, pale green eyes, structured cream blazer, calm intelligent expression, soft studio light",
+  "aspectRatio": "16:9",
+  "framing": "medium close-up",
+  "lighting": "soft studio light",
+  "mood": "calm"
+}
+```
 
-This confirms the system is not hardcoded to a single demo avatar.
+### Output
+Character image flow produces:
+
+- character profile id
+- generation job id
+- provider task id
+- generated asset id
+- downloadable asset URL
+
+### Example output shape
+
+```json
+{
+  "job": {
+    "id": "job_xxx",
+    "status": "succeeded"
+  },
+  "assets": [
+    {
+      "id": "asset_xxx",
+      "outputUrl": "https://..."
+    }
+  ]
+}
+```
+
+---
+
+## B. Character continuity workflow
+
+### Input
+A continuity workflow uses:
+
+- an existing character profile
+- one or more reference images
+- a second-pass generation prompt
+
+### Output
+This produces:
+
+- a second generation job
+- continuity-preserved asset(s)
+- fallback strategy behavior if the first reference-based attempt fails
+
+### Notes
+This project includes safer fallback logic for reference-based generation, because aggressive prompts can make upstream generation unstable.
+
+---
+
+## C. Live avatar workflow
+
+### Input
+A live avatar workflow uses:
+
+- avatar name
+- reference image URL
+- personality description
+- voice preset id
+- optional starting script
+
+### Example input
+
+```json
+{
+  "name": "Iris Vale Live",
+  "referenceImage": "https://...generated-character-image.png",
+  "personality": "You are Iris Vale, calm, articulate, thoughtful, and concise in live conversation.",
+  "voicePresetId": "nina",
+  "startScript": "Hello, I am Iris. What would you like to explore today?"
+}
+```
+
+### Output
+Live avatar creation produces:
+
+- avatar id
+- avatar processing status
+- processed avatar preview image when ready
+
+### Example output shape
+
+```json
+{
+  "avatar": {
+    "id": "avatar_xxx",
+    "status": "READY",
+    "processedImageUri": "https://..."
+  }
+}
+```
+
+---
+
+## D. Realtime live-call workflow
+
+### Input
+Realtime session creation uses:
+
+- avatar id
+
+### Example input
+
+```json
+{
+  "avatarId": "avatar_xxx"
+}
+```
+
+### Output
+Realtime session flow produces:
+
+- realtime session id
+- session status
+- session key when ready
+- consumed credentials for browser connection
+
+### Example final output shape
+
+```json
+{
+  "url": "wss://...",
+  "token": "...",
+  "roomName": "...",
+  "sessionId": "session_xxx"
+}
+```
+
+This output is what the browser demo uses to connect to LiveKit/WebRTC.
 
 ---
 
@@ -157,6 +301,27 @@ The plugin registers these OpenClaw tools:
 - `get_realtime_session`
 - `wait_for_realtime_session`
 - `consume_realtime_session`
+
+---
+
+## Example usage in code
+
+```ts
+import { createRunwayCharacterAdapter } from "./dist/src/adapter.js";
+
+const adapter = createRunwayCharacterAdapter({
+  apiKey: process.env.RUNWAY_API_KEY,
+  baseUrl: process.env.RUNWAY_BASE_URL,
+});
+
+const result = await adapter.executeTool("create_character_profile", {
+  name: "Ava Sterling",
+  visualSummary: "short black hair, amber eyes, tailored coat",
+  wardrobe: ["tailored coat"],
+});
+
+console.log(result);
+```
 
 ---
 
@@ -192,31 +357,6 @@ The plugin registers these OpenClaw tools:
 ├── data/
 └── tsconfig.json
 ```
-
----
-
-## Local development
-
-Install dependencies:
-
-```bash
-cd "/Users/bryanwen/Documents/New project"
-npm install
-```
-
-Build:
-
-```bash
-npm run build
-```
-
-Run tests:
-
-```bash
-npm test
-```
-
-The project was validated with passing test coverage after the adapter rewrite.
 
 ---
 
@@ -261,31 +401,45 @@ plugins.entries["runway-character"].config
 
 ---
 
-## Important implementation notes
+## Tested results
 
-### API integration changes that made this work
-The adapter was updated to use the current Runway API behavior, including:
+## Ava live flow
+Confirmed working end to end:
 
-- base URL:
-  - `https://api.dev.runwayml.com/v1`
-- request header:
-  - `X-Runway-Version: 2024-11-06`
-- image path:
-  - `POST /text_to_image`
-- task polling:
-  - `GET /tasks/{id}`
-- realtime session flow:
-  - avatars
-  - realtime sessions
-  - consume endpoint
+- live avatar creation
+- avatar readiness polling
+- realtime session creation
+- realtime session readiness polling
+- credential consumption
 
-### Continuity improvements
-Reference-based character generation can be unstable with aggressive prompts.
-The project now includes:
+### Ava avatar
+- Avatar ID: `05adb9d7-2a4f-4456-9b75-fcc074481c85`
 
-- safer reference prompt shaping
-- multi-strategy probing
-- fallback logic for second-pass image continuity
+---
+
+## Iris flow (fresh prompt retest)
+A completely new character prompt was generated and the full pipeline succeeded again.
+
+### Character prompt
+- Name: `Iris Vale Live Test`
+- Visual summary: `dark auburn bob, pale green eyes, structured cream blazer`
+- Image prompt:
+
+```text
+Editorial portrait of Iris Vale, dark auburn bob, pale green eyes, structured cream blazer, calm intelligent expression, soft studio light
+```
+
+### Result
+- Character ID: `char_162bef65979844e3a27df8d336edf69e`
+- Generated image job succeeded
+- Live avatar was created and reached `READY`
+- Realtime session was created and reached `READY`
+- Session credentials were consumed successfully
+
+### Iris live avatar
+- Avatar ID: `f61f196d-7595-4308-809e-f2feb365a30c`
+
+This confirms the system is not hardcoded to a single demo avatar.
 
 ---
 
@@ -299,7 +453,6 @@ demo-live/
 Start it with:
 
 ```bash
-cd "/Users/bryanwen/Documents/New project"
 node demo-live/server.mjs
 ```
 
