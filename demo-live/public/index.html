@@ -40,6 +40,14 @@
 
     .hero {
       margin-bottom: 28px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .hero-copy {
+      min-width: 0;
     }
 
     .eyebrow {
@@ -73,6 +81,35 @@
       border: 1px solid var(--line);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
+    }
+
+    .status-capsule {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--soft);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 10px 14px;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+      margin-top: 2px;
+    }
+
+    .capsule-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #dc2626;
+      box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+      animation: pulse 1.6s infinite;
+      flex: 0 0 auto;
+    }
+
+    .capsule-dot.connected {
+      background: #16a34a;
+      box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4);
     }
 
     .controls {
@@ -122,6 +159,7 @@
       gap: 10px;
       margin-top: 12px;
     }
+
 
     button {
       padding: 12px 14px;
@@ -226,7 +264,7 @@
       gap: 18px;
     }
 
-    .status,
+    .profile,
     .links {
       padding: 18px;
     }
@@ -243,6 +281,46 @@
       border-radius: 12px;
       padding: 14px;
       min-height: 180px;
+    }
+
+    .profile-box {
+      min-height: 180px;
+      background: var(--soft);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .profile-name {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .profile-description {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .profile-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .profile-item {
+      font-size: 13px;
+      color: #2d2d2d;
+    }
+
+    .profile-item strong {
+      color: var(--text);
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      70% { box-shadow: 0 0 0 8px rgba(0,0,0,0); transform: scale(1.02); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,0,0,0); }
     }
 
     .link-list {
@@ -289,6 +367,11 @@
         grid-template-columns: 1fr;
       }
 
+      .hero {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
       .pane.remote,
       .pane.local {
         aspect-ratio: 16 / 9;
@@ -303,14 +386,17 @@
 <body>
   <main class="page">
     <section class="hero">
-      <div class="eyebrow">Powered by Runway Character</div>
-      <h1>Live call demo</h1>
+      <div class="hero-copy">
+        <div class="eyebrow">Powered by Runway Character</div>
+        <h1>Live call demo</h1>
+      </div>
+      <div class="status-capsule" id="topStatusCapsule"><span class="capsule-dot" id="topStatusDot"></span><span id="topStatusText">Status: Disconnected</span></div>
     </section>
 
     <section class="card controls grid-2">
       <div class="field">
         <label for="avatarId">Avatar ID</label>
-        <input id="avatarId" value="05adb9d7-2a4f-4456-9b75-fcc074481c85" />
+        <input id="avatarId" value="a31eed04-3e3a-4f54-a958-8e5fb2ed1a2d" />
       </div>
       <div>
         <div class="section-title">Session Controls</div>
@@ -324,7 +410,7 @@
     <section class="video-layout">
       <div class="card pane remote" id="remotePane">
         <div class="pane-label">Remote Avatar</div>
-        <div class="pane-placeholder">Ava’s live video will appear here after the room connects.</div>
+        <div class="pane-placeholder">Live video will appear here after the room connects.</div>
       </div>
       <div class="card pane local" id="localPane">
         <div class="pane-label">Local Preview</div>
@@ -333,9 +419,9 @@
     </section>
 
     <section class="bottom-grid">
-      <div class="card status">
-        <div class="section-title">Status</div>
-        <pre id="status">Idle.</pre>
+      <div class="card profile">
+        <div class="section-title">Character Profile</div>
+        <div class="profile-box" id="profileBox"></div>
       </div>
 
       <div class="card links">
@@ -355,7 +441,7 @@
           </a>
         </div>
         <div class="footnote">
-          Tip: keep the default Ava avatar ID for the quickest end-to-end validation.
+          Tip: keep the default Maya avatar ID for the quickest end-to-end validation.
         </div>
       </div>
     </section>
@@ -363,31 +449,83 @@
 
   <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
   <script>
-    const statusEl = document.getElementById('status');
     const remotePane = document.getElementById('remotePane');
     const localPane = document.getElementById('localPane');
     const avatarIdEl = document.getElementById('avatarId');
     const connectBtn = document.getElementById('connectBtn');
     const disconnectBtn = document.getElementById('disconnectBtn');
+    const topStatusCapsule = document.getElementById('topStatusCapsule');
+    const topStatusDot = document.getElementById('topStatusDot');
+    const topStatusText = document.getElementById('topStatusText');
+    const profileBox = document.getElementById('profileBox');
     let room;
 
-    const avatarNameMap = {
-      '05adb9d7-2a4f-4456-9b75-fcc074481c85': 'Ava',
-      'f61f196d-7595-4308-809e-f2feb365a30c': 'Iris',
+    const avatarProfiles = {
+      '05adb9d7-2a4f-4456-9b75-fcc074481c85': {
+        name: 'Ava',
+        description: 'Calm, sharp, cinematic female lead for live avatar testing.',
+        style: 'Editorial / cinematic realism',
+        wardrobe: 'Tailored coat',
+        voice: 'Clara-like soft professional tone'
+      },
+      'f61f196d-7595-4308-809e-f2feb365a30c': {
+        name: 'Iris',
+        description: 'Minimal, polished character for clean avatar demo flows.',
+        style: 'Soft realism',
+        wardrobe: 'White coat, dark accents',
+        voice: 'Warm neutral tone'
+      },
+      'a31eed04-3e3a-4f54-a958-8e5fb2ed1a2d': {
+        name: 'Maya',
+        description: 'Default demo avatar for fast end-to-end validation.',
+        style: 'Runway live demo default',
+        wardrobe: 'Demo default look',
+        voice: 'Default live preset'
+      },
+      '4972e7e9-93b9-4f8d-92df-18ff7275548c': {
+        name: 'Lin Wu',
+        description: 'Calm, thoughtful, and professional. Finance-informed, restrained, intelligent presence.',
+        style: 'Cinematic realism',
+        wardrobe: 'Dark blue long coat, black turtleneck',
+        voice: 'Clara'
+      }
     };
 
-    function log(obj) {
-      statusEl.textContent = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
+    function setConnectionState(connected, label) {
+      topStatusDot.classList.toggle('connected', connected);
+      topStatusText.textContent = `Status: ${label}`;
     }
 
     function resolveAvatarName(avatarId) {
-      return avatarNameMap[avatarId] || 'Character';
+      return avatarProfiles[avatarId]?.name || 'Character';
+    }
+
+    function renderProfile(avatarId) {
+      const profile = avatarProfiles[avatarId] || {
+        name: 'Custom Character',
+        description: 'No saved profile preview yet. Connect with this avatar ID to test live video.',
+        style: 'Unknown',
+        wardrobe: 'Unknown',
+        voice: 'Unknown'
+      };
+
+      profileBox.innerHTML = `
+        <div class="profile-name">${profile.name}</div>
+        <div class="profile-description">${profile.description}</div>
+        <div class="profile-list">
+          <div class="profile-item"><strong>Style:</strong> ${profile.style}</div>
+          <div class="profile-item"><strong>Wardrobe:</strong> ${profile.wardrobe}</div>
+          <div class="profile-item"><strong>Voice:</strong> ${profile.voice}</div>
+          <div class="profile-item"><strong>Avatar ID:</strong> ${avatarId || 'Not set'}</div>
+        </div>
+      `;
     }
 
     function updateConnectButtonLabel() {
       const avatarId = avatarIdEl.value.trim();
       const name = resolveAvatarName(avatarId);
       connectBtn.textContent = `Connect to ${name}`;
+      renderProfile(avatarId);
     }
 
     function setPanePlaceholder(el, label, text) {
@@ -417,7 +555,7 @@
       }
 
       connectBtn.disabled = true;
-      log(`Creating live session for ${resolveAvatarName(avatarId)}...`);
+      setConnectionState(false, 'Connecting...');
 
       const res = await fetch('/api/avatar/live-session', {
         method: 'POST',
@@ -427,11 +565,10 @@
       const credentials = await res.json();
       if (!res.ok) {
         connectBtn.disabled = false;
-        log(credentials);
+        setConnectionState(false, 'Disconnected');
+        console.error(credentials);
         return;
       }
-
-      log({ step: 'credentials_ready', credentials });
 
       room = new LivekitClient.Room();
       room.on(LivekitClient.RoomEvent.TrackSubscribed, (track) => {
@@ -445,16 +582,18 @@
         }
       });
       room.on(LivekitClient.RoomEvent.Disconnected, () => {
-        log('Disconnected');
+        setConnectionState(false, 'Disconnected');
         connectBtn.disabled = false;
       });
       room.on(LivekitClient.RoomEvent.ConnectionStateChanged, (state) => {
-        log({ state });
+        if (String(state).toLowerCase().includes('connected')) {
+          setConnectionState(true, 'Connected');
+        }
       });
 
       await room.connect(credentials.url, credentials.token);
       await attachLocalTracks();
-      log({ step: 'connected', room: credentials.roomName });
+      setConnectionState(true, 'Connected');
     }
 
     async function disconnect() {
@@ -462,11 +601,11 @@
         await room.disconnect();
         room = null;
       }
-      setPanePlaceholder(remotePane, 'Remote Avatar', 'Ava’s live video will appear here after the room connects.');
+      setPanePlaceholder(remotePane, 'Remote Avatar', 'Live video will appear here after the room connects.');
       setPanePlaceholder(localPane, 'Local Preview', 'Your camera preview will appear here after permissions are granted.');
       connectBtn.disabled = false;
       updateConnectButtonLabel();
-      log('Disconnected');
+      setConnectionState(false, 'Disconnected');
     }
 
     avatarIdEl.addEventListener('input', updateConnectButtonLabel);
@@ -474,14 +613,16 @@
     connectBtn.addEventListener('click', () => connect().catch((err) => {
       connectBtn.disabled = false;
       updateConnectButtonLabel();
-      log({ error: err.message || String(err) });
+      setConnectionState(false, 'Disconnected');
+      console.error(err);
     }));
 
     disconnectBtn.addEventListener('click', () => disconnect().catch((err) => {
-      log({ error: err.message || String(err) });
+      console.error(err);
     }));
 
     updateConnectButtonLabel();
+    setConnectionState(false, 'Disconnected');
   </script>
 </body>
 </html>
