@@ -1,4 +1,4 @@
-# Runway Character for OpenClaw
+# Runway Character for OpenClaw🦞
 
 OpenClaw plugin + TypeScript adapter for building **Runway-powered character workflows**:
 
