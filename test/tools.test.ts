@@ -27,7 +27,7 @@ describe("tool registration and handlers", () => {
 
     registerRunwayCharacterTools(registry, adapter);
 
-    expect(registry.tools).toHaveLength(10);
+    expect(registry.tools).toHaveLength(16);
     expect(registry.tools).toContain("generate_storyboard_sequence");
   });
 

@@ -74,6 +74,101 @@ function buildAdapterConfig(api: PluginApi, pluginConfig: PluginConfig): Partial
   };
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function shortText(value: unknown, max = 160): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  return trimmed.length <= max ? trimmed : `${trimmed.slice(0, max - 1)}…`;
+}
+
+function maskToken(value: unknown): string | undefined {
+  const text = shortText(value, 48);
+  if (!text) {
+    return undefined;
+  }
+
+  if (text.length <= 16) {
+    return text;
+  }
+
+  return `${text.slice(0, 8)}…${text.slice(-6)}`;
+}
+
+function collectHighlights(data: unknown): Array<[string, string]> {
+  const highlights: Array<[string, string]> = [];
+  const push = (label: string, value: unknown, formatter?: (input: unknown) => string | undefined) => {
+    const formatted = formatter ? formatter(value) : shortText(value);
+    if (formatted) {
+      highlights.push([label, formatted]);
+    }
+  };
+
+  const root = asRecord(data);
+  if (!root) {
+    return highlights;
+  }
+
+  const avatar = asRecord(root.avatar);
+  if (avatar) {
+    push("Avatar", avatar.name);
+    push("Avatar ID", avatar.id);
+    push("Avatar status", avatar.status);
+  }
+
+  const session = asRecord(root.session);
+  if (session) {
+    push("Session ID", session.id);
+    push("Session status", session.status);
+    push("Room", session.roomName);
+    push("Session key", session.sessionKey, maskToken);
+  }
+
+  const credentials = asRecord(root.credentials);
+  if (credentials) {
+    push("Room", credentials.roomName);
+    push("Endpoint", credentials.url);
+    push("Token", credentials.token, maskToken);
+  }
+
+  const job = asRecord(root.job);
+  if (job) {
+    push("Job ID", job.id);
+    push("Job status", job.status);
+    push("Media type", job.mediaType);
+  }
+
+  const asset = asRecord(root.asset);
+  if (asset) {
+    push("Asset ID", asset.id);
+    push("Asset path", asset.localPath);
+    push("Asset URL", asset.downloadUrl ?? asset.url);
+  }
+
+  const profile = asRecord(root.profile);
+  if (profile) {
+    push("Character", profile.name);
+    push("Character ID", profile.id);
+  }
+
+  push("Attempts", root.attempts, (value) =>
+    typeof value === "number" ? String(value) : undefined,
+  );
+
+  return highlights;
+}
+
 function formatToolResult(result: unknown): string {
   if (!result || typeof result !== "object") {
     return String(result);
@@ -87,29 +182,49 @@ function formatToolResult(result: unknown): string {
     nextActions?: unknown;
   };
 
-  const parts: string[] = [];
+  const sections: string[] = [];
 
   if (typeof payload.summary === "string" && payload.summary.trim()) {
-    parts.push(payload.summary.trim());
+    sections.push(`Summary\n${payload.summary.trim()}`);
   }
 
-  if (payload.data !== undefined) {
-    parts.push(`data:\n${JSON.stringify(payload.data, null, 2)}`);
+  const highlights = collectHighlights(payload.data);
+  if (highlights.length > 0) {
+    sections.push(
+      `Key details\n${highlights.map(([label, value]) => `- ${label}: ${value}`).join("\n")}`,
+    );
   }
 
-  if (payload.error !== undefined) {
-    parts.push(`error:\n${JSON.stringify(payload.error, null, 2)}`);
+  const error = asRecord(payload.error);
+  if (error) {
+    const errorLines: string[] = [];
+    const code = shortText(error.code);
+    const message = shortText(error.message, 220);
+    const retryable = typeof error.retryable === "boolean" ? String(error.retryable) : undefined;
+
+    if (code) errorLines.push(`- Code: ${code}`);
+    if (message) errorLines.push(`- Message: ${message}`);
+    if (retryable) errorLines.push(`- Retryable: ${retryable}`);
+
+    if (errorLines.length > 0) {
+      sections.push(`Error\n${errorLines.join("\n")}`);
+    }
   }
 
-  if (payload.nextActions !== undefined) {
-    parts.push(`nextActions:\n${JSON.stringify(payload.nextActions, null, 2)}`);
+  if (Array.isArray(payload.nextActions) && payload.nextActions.length > 0) {
+    sections.push(
+      `Next steps\n${payload.nextActions
+        .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+        .map((item) => `- ${item}`)
+        .join("\n")}`,
+    );
   }
 
-  if (parts.length === 0) {
+  if (sections.length === 0) {
     return JSON.stringify(result, null, 2);
   }
 
-  return parts.join("\n\n");
+  return sections.join("\n\n");
 }
 
 export default function register(api: PluginApi) {

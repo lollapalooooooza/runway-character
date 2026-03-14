@@ -1,4 +1,4 @@
-# Ava Live Call Demo
+# Live call demo
 
 A minimal local demo for testing **Runway Character** live avatar calls from this project.
 
