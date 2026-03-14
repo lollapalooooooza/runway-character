@@ -1,3 +1,6 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -27,8 +30,128 @@ describe("tool registration and handlers", () => {
 
     registerRunwayCharacterTools(registry, adapter);
 
-    expect(registry.tools).toHaveLength(16);
+    expect(registry.tools).toHaveLength(18);
     expect(registry.tools).toContain("generate_storyboard_sequence");
+  });
+
+  it("converts long-form character knowledge into a profile draft", async () => {
+    const config = await createTempConfig();
+    const adapter = createRunwayCharacterAdapter({
+      ...config,
+      fetchFn: createFetchStub([]),
+    });
+
+    const result = await adapter.executeTool("ingest_character_knowledge", {
+      sourceText: `
+姓名: 林雾
+外观概述: 冷静的东亚女性，黑色短发，琥珀色眼睛，深色长风衣。
+性格: 克制、聪明、观察力强
+服装:
+- 深蓝长风衣
+- 黑色高领毛衣
+风格标签: cinematic, 写实, 电影感
+一致性规则:
+- 保持琥珀色眼睛
+- 保持短黑发和利落轮廓
+`,
+    });
+
+    expect(result.ok).toBe(true);
+    const data = result.data as {
+      profileDraft: {
+        name: string;
+        wardrobe?: string[];
+        styleTags?: string[];
+        continuityNotes?: string[];
+      };
+    };
+
+    expect(data.profileDraft.name).toBe("林雾");
+    expect(data.profileDraft.wardrobe).toContain("深蓝长风衣");
+    expect(data.profileDraft.styleTags).toEqual(
+      expect.arrayContaining(["cinematic", "写实", "电影感"]),
+    );
+    expect(data.profileDraft.continuityNotes?.length).toBeGreaterThan(0);
+  });
+
+  it("loads character knowledge from a local text file", async () => {
+    const config = await createTempConfig();
+    const adapter = createRunwayCharacterAdapter({
+      ...config,
+      fetchFn: createFetchStub([]),
+    });
+
+    const filePath = path.join(config.dataRootDir!, "character-knowledge.md");
+    await mkdir(config.dataRootDir!, { recursive: true });
+    await writeFile(
+      filePath,
+      "name: Iris Vale\nvisual summary: silver hair, green eyes, white coat\nwardrobe: white coat, black boots\n",
+      "utf8",
+    );
+
+    const result = await adapter.executeTool("ingest_character_knowledge", {
+      sourceFilePath: filePath,
+    });
+
+    expect(result.ok).toBe(true);
+    const data = result.data as { profileDraft: { name: string; visualSummary?: string } };
+    expect(data.profileDraft.name).toBe("Iris Vale");
+    expect(data.profileDraft.visualSummary).toContain("silver hair");
+  });
+
+  it("creates a character profile directly from attachment paths", async () => {
+    const config = await createTempConfig();
+    const adapter = createRunwayCharacterAdapter({
+      ...config,
+      fetchFn: createFetchStub([]),
+    });
+
+    const filePath = path.join(config.dataRootDir!, "attachment-knowledge.md");
+    await mkdir(config.dataRootDir!, { recursive: true });
+    await writeFile(
+      filePath,
+      "姓名: 纪岚\n外观概述: 黑发，灰眼，长外套。\n服装: 长外套, 皮靴\n",
+      "utf8",
+    );
+
+    const result = await adapter.executeTool("create_character_from_knowledge", {
+      attachmentPaths: [filePath],
+    });
+
+    expect(result.ok).toBe(true);
+    const data = result.data as {
+      character: { name: string };
+    };
+    expect(data.character.name).toBe("纪岚");
+  });
+
+  it("creates a character profile directly from knowledge", async () => {
+    const config = await createTempConfig();
+    const adapter = createRunwayCharacterAdapter({
+      ...config,
+      fetchFn: createFetchStub([]),
+    });
+
+    const result = await adapter.executeTool("create_character_from_knowledge", {
+      sourceText: `
+姓名: 苏岚
+外观概述: 银白短发，绿色眼睛，白色长外套。
+性格: 冷静，专业，少说话
+服装: 白色长外套, 黑色靴子
+风格标签: editorial, cinematic
+`,
+    });
+
+    expect(result.ok).toBe(true);
+    const data = result.data as {
+      character: { id: string; name: string };
+      profileDraft: { styleTags?: string[] };
+    };
+    expect(data.character.id).toMatch(/^char_/);
+    expect(data.character.name).toBe("苏岚");
+    expect(data.profileDraft.styleTags).toEqual(
+      expect.arrayContaining(["editorial", "cinematic"]),
+    );
   });
 
   it("updates character metadata, styles, and references", async () => {

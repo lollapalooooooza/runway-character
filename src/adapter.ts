@@ -29,6 +29,8 @@ import { AssetStore } from "./storage/assetStore.js";
 import { CharacterStore } from "./storage/characterStore.js";
 import { JobStore } from "./storage/jobStore.js";
 import { createCharacterProfileTool } from "./tools/createCharacterProfile.js";
+import { createCharacterFromKnowledgeTool, toKnowledgeInput } from "./tools/createCharacterFromKnowledge.js";
+import { ingestCharacterKnowledge, ingestCharacterKnowledgeTool } from "./tools/ingestCharacterKnowledge.js";
 import { createLiveAvatarTool } from "./tools/createLiveAvatar.js";
 import { createRealtimeSessionTool } from "./tools/createRealtimeSession.js";
 import { generateCharacterImageTool } from "./tools/generateCharacterImage.js";
@@ -49,8 +51,10 @@ import type {
   CharacterProfile,
   CharacterStoreContract,
   ConsumeRealtimeSessionInput,
+  CreateCharacterFromKnowledgeInput,
   CreateCharacterProfileInput,
   CreateLiveAvatarInput,
+  IngestCharacterKnowledgeInput,
   CreateRealtimeSessionInput,
   DownloadGeneratedAssetInput,
   GenerateCharacterImageInput,
@@ -137,6 +141,8 @@ export class RunwayCharacterAdapter implements RunwayToolContext {
 
     this.tools = new Map(
       [
+        ingestCharacterKnowledgeTool(this),
+        createCharacterFromKnowledgeTool(this),
         createCharacterProfileTool(this),
         getCharacterProfileTool(this),
         updateCharacterProfileTool(this),
@@ -199,6 +205,48 @@ export class RunwayCharacterAdapter implements RunwayToolContext {
 
   async close(): Promise<void> {
     await this.lifecycle.close();
+  }
+
+  async ingestCharacterKnowledge(
+    input: IngestCharacterKnowledgeInput,
+  ): Promise<OpenClawToolResult> {
+    const { output, sourceLabel } = await ingestCharacterKnowledge(input);
+
+    return {
+      ok: true,
+      toolName: "ingest_character_knowledge",
+      summary: `Converted character knowledge from ${sourceLabel} into a structured character profile draft for ${output.profileDraft.name}.`,
+      data: output,
+      nextActions: output.suggestedNextActions,
+    };
+  }
+
+  async createCharacterFromKnowledge(
+    input: CreateCharacterFromKnowledgeInput,
+  ): Promise<OpenClawToolResult> {
+    const { output, sourceLabel } = await ingestCharacterKnowledge(
+      toKnowledgeInput(input),
+    );
+    const profile = mapCreateCharacterProfileInput(output.profileDraft);
+    await this.characterStore.create(profile);
+
+    return {
+      ok: true,
+      toolName: "create_character_from_knowledge",
+      summary: `Created character profile ${profile.name} (${profile.id}) directly from knowledge source ${sourceLabel}.`,
+      data: {
+        knowledge: output.knowledge,
+        profileDraft: output.profileDraft,
+        character: profile,
+        characterSummary: {
+          id: profile.id,
+          name: profile.name,
+          slug: profile.slug,
+          referenceImageCount: profile.referenceImages.length,
+        },
+      },
+      nextActions: ["get_character_profile", "generate_character_image", "update_character_profile"],
+    };
   }
 
   async createCharacterProfile(

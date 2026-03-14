@@ -27,7 +27,7 @@ describe("OpenClaw plugin registration", () => {
     });
 
     expect(registerTool).toHaveBeenCalled();
-    expect(registerTool.mock.calls).toHaveLength(16);
+    expect(registerTool.mock.calls).toHaveLength(18);
     expect(info).toHaveBeenCalledWith(
       expect.stringContaining("Missing API key"),
     );

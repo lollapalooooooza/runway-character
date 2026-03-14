@@ -2,9 +2,12 @@
 
 A TypeScript adapter + OpenClaw plugin for building **Runway-powered character workflows**.
 
-This project helps you turn a simple character idea into a reusable live avatar pipeline:
+This project helps you turn a simple character idea — or an uploaded character document — into a reusable live avatar pipeline:
 
 - 🧠 structured character profiles
+- 📚 knowledge ingestion from pasted text, local files, or uploaded attachments
+- ⚡ one-shot character creation from knowledge sources
+- 🔗 OpenClaw attachment bridge (`MediaPath` / `MediaPaths` → `attachmentPaths`)
 - 🖼️ consistent character image generation
 - 🎭 visual continuity across generations
 - 🗣️ live avatar creation
@@ -19,16 +22,17 @@ This repo connects **OpenClaw** with **Runway character workflows**.
 
 At a high level, it lets you:
 
-1. define a character
-2. generate images of that character
-3. keep the character visually consistent
-4. turn the character into a live avatar
-5. create a realtime session for live interaction in the browser
+1. ingest character knowledge from text, attachments, or files
+2. define or create a character profile from that knowledge
+3. generate images of that character
+4. keep the character visually consistent
+5. turn the character into a live avatar
+6. create a realtime session for live interaction in the browser
 
 ### Core mental model
 
 ```text
-Character Profile → Character Image → Live Avatar → Realtime Session
+Knowledge Source → Character Profile → Character Image → Live Avatar → Realtime Session
 ````
 
 ---
@@ -38,6 +42,7 @@ Character Profile → Character Image → Live Avatar → Realtime Session
 This project is useful if you want to:
 
 * build reusable AI characters inside OpenClaw
+* turn uploaded PDFs, DOCX files, markdown notes, or pasted lore into character profiles
 * generate consistent visual identities for characters
 * experiment with live avatars and realtime sessions
 * test the full flow locally in a browser
@@ -81,11 +86,53 @@ You can use one of these known working avatars in the demo:
 * `05adb9d7-2a4f-4456-9b75-fcc074481c85` — **Ava**
 * `f61f196d-7595-4308-809e-f2feb365a30c` — **Iris**
 
+### 5) Start the knowledge upload API
+
+```bash
+npm run build
+npm run start:api
+```
+
+Then POST to:
+
+```text
+http://127.0.0.1:4319/api/characters/from-knowledge
+```
+
+Supported knowledge inputs:
+
+* `sourceText`
+* `sourceFilePath`
+* `sourceUrl`
+* `attachmentPaths`
+* `attachmentUrls`
+* `multipart/form-data` with `file`
+
+Supported file types:
+
+* `.txt`
+* `.md`
+* `.markdown`
+* `.json`
+* `.pdf` (via `pdftotext`)
+* `.docx` (via macOS `textutil`)
+
 ---
 
 ## How the Workflow Works 🪄
 
 Here is the normal end-to-end flow:
+
+### 0. Ingest knowledge
+
+Start with any of these:
+
+* pasted character notes
+* uploaded attachments from OpenClaw WebChat / Control UI
+* local markdown / text / JSON files
+* PDF or DOCX character documents
+
+Then normalize that source into a structured profile draft or create the character directly.
 
 ### 1. Create a character profile
 
@@ -127,7 +174,9 @@ Create a realtime session for the avatar, wait until it becomes ready, then cons
 ## Workflow Diagram 🔁
 
 ```text
-Character Idea
+Knowledge Source / Character Notes / Uploaded File
+   ↓
+Ingest Character Knowledge
    ↓
 Create Character Profile
    ↓
@@ -160,11 +209,27 @@ Use the registered tools inside OpenClaw agents.
 
 Main tool groups:
 
+* character knowledge ingestion tools
 * character profile tools
 * generation job tools
 * asset tools
 * live avatar tools
 * realtime session tools
+
+OpenClaw upload workflow:
+
+1. User uploads a document in WebChat / Control UI
+2. OpenClaw exposes that upload as media context (`MediaPath`, `MediaPaths`, `MediaUrl`, `MediaUrls`)
+3. This project maps that into `attachmentPaths` / `attachmentUrls`
+4. The agent calls either:
+   * `ingest_character_knowledge` for draft/review mode
+   * `create_character_from_knowledge` for immediate creation
+
+Example prompts:
+
+* `根据这个文件创建角色`
+* `先提取这个附件里的角色信息`
+* `用上传的 PDF 生成 Runway character`
 
 Best if you want **OpenClaw agents to drive the workflow**.
 

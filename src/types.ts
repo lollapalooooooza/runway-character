@@ -368,6 +368,34 @@ export interface CreateCharacterProfileInput {
   continuityNotes?: string[];
 }
 
+export interface IngestCharacterKnowledgeInput {
+  name?: string;
+  sourceText?: string;
+  sourceFilePath?: string;
+  sourceUrl?: string;
+  attachmentPaths?: string[];
+  attachmentUrls?: string[];
+  appendAsContinuityNote?: boolean;
+}
+
+export interface CreateCharacterFromKnowledgeInput {
+  name?: string;
+  sourceText?: string;
+  sourceFilePath?: string;
+  sourceUrl?: string;
+  attachmentPaths?: string[];
+  attachmentUrls?: string[];
+}
+
+export interface IngestCharacterKnowledgeOutput {
+  knowledge: {
+    sourceSummary: string;
+    extractedFields: Record<string, unknown>;
+  };
+  profileDraft: CreateCharacterProfileInput;
+  suggestedNextActions: string[];
+}
+
 export interface EditableCharacterProfileFields {
   description?: string;
   visualSummary?: string;
@@ -607,6 +635,12 @@ export interface RunwayClientContract {
 }
 
 export interface RunwayToolContext {
+  ingestCharacterKnowledge(
+    input: IngestCharacterKnowledgeInput,
+  ): Promise<OpenClawToolResult>;
+  createCharacterFromKnowledge(
+    input: CreateCharacterFromKnowledgeInput,
+  ): Promise<OpenClawToolResult>;
   createCharacterProfile(
     input: CreateCharacterProfileInput,
   ): Promise<OpenClawToolResult>;
