@@ -373,6 +373,39 @@ http://localhost:4318
 
 ---
 
+## Workflow Diagram
+
+```text
+Character Idea
+   ↓
+Create Character Profile
+   ↓
+Generate Character Image
+   ↓
+(Optional) Add References + Continuity
+   ↓
+Create Live Avatar
+   ↓
+Wait for Avatar READY
+   ↓
+Create Realtime Session
+   ↓
+Wait for Session READY
+   ↓
+Consume Session Credentials
+   ↓
+Connect Browser Client / Live Call
+```
+
+This is the core mental model for the project.
+
+- the character profile defines identity
+- generated images provide the visual base
+- the live avatar turns that base into a realtime speaking character
+- the realtime session provides credentials for the browser or client app
+
+---
+
 ## Configuration
 
 This project can run in two modes:
