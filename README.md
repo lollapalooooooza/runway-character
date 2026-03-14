@@ -1,5 +1,35 @@
 # Runway Character for OpenClaw
 
+OpenClaw plugin + TypeScript adapter for building **Runway-powered character workflows**:
+
+- structured character profiles
+- image generation and continuity
+- live avatar creation
+- realtime session orchestration
+- local browser demo for live calls
+
+## Quick start
+
+```bash
+cd "/Users/bryanwen/Documents/New project"
+npm install
+npm run build
+node demo-live/server.mjs
+```
+
+Open:
+
+```text
+http://localhost:4318
+```
+
+Use one of the tested avatar IDs:
+
+- `05adb9d7-2a4f-4456-9b75-fcc074481c85` → Ava
+- `f61f196d-7595-4308-809e-f2feb365a30c` → Iris
+
+---
+
 A production-style OpenClaw plugin and adapter for **Runway character workflows**, including:
 
 - character profile management
