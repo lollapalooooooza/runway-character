@@ -253,6 +253,65 @@ Expected user-visible result:
 - return the character name and id when creation succeeds
 - suggest the next step, usually `generate_character_image` or `update_character_profile`
 
+### End-to-end example: upload → create character
+
+Example user flow in OpenClaw WebChat / Control UI:
+
+1. The user uploads `character-notes.pdf`
+2. OpenClaw exposes that upload as `MediaPath` or `MediaPaths`
+3. The user says:
+
+```text
+根据这个文件创建角色
+```
+
+4. The agent maps the upload into:
+
+```json
+{
+  "attachmentPaths": ["/tmp/openclaw/uploads/character-notes.pdf"]
+}
+```
+
+5. The agent calls:
+
+```text
+create_character_from_knowledge
+```
+
+6. The expected reply shape is:
+   - `已根据上传文件创建角色 林雾`
+   - `character id: char_xxx`
+   - `下一步可以生成角色图或继续微调 profile`
+
+### End-to-end example: upload → extract draft only
+
+1. The user uploads `character-notes.docx`
+2. The user says:
+
+```text
+先提取这个附件里的角色信息，不要创建
+```
+
+3. The agent maps the upload into:
+
+```json
+{
+  "attachmentPaths": ["/tmp/openclaw/uploads/character-notes.docx"]
+}
+```
+
+4. The agent calls:
+
+```text
+ingest_character_knowledge
+```
+
+5. The expected reply shape is:
+   - `已从上传文档提取角色草稿`
+   - `识别到姓名 / 外观 / 服装 / 风格标签等字段`
+   - `如果你确认无误，我可以继续创建 character`
+
 Best if you want **OpenClaw agents to drive the workflow**.
 
 ---
