@@ -2,11 +2,10 @@
 
 A TypeScript adapter + OpenClaw plugin for building **Runway-powered character workflows**.
 
-This project helps you turn a simple character idea — and, in the future, uploaded character documents — into a reusable live avatar pipeline:
+This project helps you turn a simple character idea into a reusable live avatar pipeline, and lets you enrich character workflows with text-based knowledge descriptions:
 
 - 🧠 structured character profiles
-- 📚 knowledge ingestion from pasted text and local files
-- ⚡ one-shot character creation from knowledge sources
+- 📚 optional text-based knowledge descriptions for character understanding and refinement
 - 🔮 future-ready OpenClaw attachment bridge (`MediaPath` / `MediaPaths` → `attachmentPaths`) for when WebChat/Control UI supports document uploads
 - 🖼️ consistent character image generation
 - 🎭 visual continuity across generations
@@ -22,8 +21,8 @@ This repo connects **OpenClaw** with **Runway character workflows**.
 
 At a high level, it lets you:
 
-1. ingest character knowledge from text and files
-2. define or create a character profile from that knowledge
+1. define a character profile
+2. enrich that profile with text-based character knowledge or notes
 3. generate images of that character
 4. keep the character visually consistent
 5. turn the character into a live avatar
@@ -123,7 +122,7 @@ Supported file types:
 
 Here is the normal end-to-end flow:
 
-### 0. Ingest knowledge
+### 0. Add knowledge context
 
 Current supported product flow:
 
@@ -135,7 +134,7 @@ Future planned OpenClaw flow:
 
 * uploaded attachments from OpenClaw WebChat / Control UI
 
-Then normalize that source into a structured profile draft or create the character directly.
+Use this information as additional character context and descriptive input during profile creation or refinement.
 
 ### 1. Create a character profile
 
@@ -177,9 +176,9 @@ Create a realtime session for the avatar, wait until it becomes ready, then cons
 ## Workflow Diagram 🔁
 
 ```text
-Knowledge Source / Character Notes / Uploaded File
+Character Idea / Character Notes / Future Uploaded File
    ↓
-Ingest Character Knowledge
+Add Knowledge Context
    ↓
 Create Character Profile
    ↓
@@ -223,23 +222,21 @@ Current OpenClaw chat workflow (works today):
 
 1. User pastes character notes directly into the chat box
 2. The agent maps that content to `sourceText`
-3. The agent calls either:
-   * `ingest_character_knowledge` for draft/review mode
-   * `create_character_from_knowledge` for immediate creation
+3. The pasted content is used as additional character context when creating or refining a profile
 
 Example prompts that work today:
 
-* `根据这段内容创建角色`
-* `先提取这段设定里的角色信息`
-* `把我刚发的角色描述整理成 character profile`
+* `把这段设定作为角色描述加入 profile`
+* `参考我刚发的角色描述创建人物设定`
+* `根据我刚发的内容补充角色外观和性格`
 
-### End-to-end example: pasted text → create character
+### End-to-end example: pasted text → enrich character creation
 
 1. The user pastes character notes into chat
 2. The user says:
 
 ```text
-根据这段内容创建角色
+参考这段内容创建角色设定
 ```
 
 3. The agent maps the message into:
@@ -250,16 +247,11 @@ Example prompts that work today:
 }
 ```
 
-4. The agent calls:
-
-```text
-create_character_from_knowledge
-```
+4. The agent uses the pasted text as knowledge/context while creating or refining the character profile
 
 5. The expected reply shape is:
-   - `已根据这段设定创建角色 林雾`
-   - `character id: char_xxx`
-   - `下一步可以生成角色图或继续微调 profile`
+   - `已参考这段设定补充角色描述`
+   - `可以继续生成角色图或微调 profile`
 
 ### Planned future OpenClaw upload workflow
 
@@ -270,15 +262,13 @@ When OpenClaw WebChat / Control UI supports document uploads, the intended bridg
 1. User uploads a document in WebChat / Control UI
 2. OpenClaw exposes that upload as media context (`MediaPath`, `MediaPaths`, `MediaUrl`, `MediaUrls`)
 3. This project maps that into `attachmentPaths` / `attachmentUrls`
-4. The agent calls either:
-   * `ingest_character_knowledge` for draft/review mode
-   * `create_character_from_knowledge` for immediate creation
+4. The uploaded content can then be used as character knowledge/context in the same way as pasted text
 
 Future example prompts:
 
-* `根据这个文件创建角色`
-* `先提取这个附件里的角色信息`
-* `用上传的 PDF 生成 Runway character`
+* `把这个文件作为角色设定参考`
+* `参考这个附件补充人物描述`
+* `用上传的 PDF 里的设定完善角色 profile`
 
 Best if you want **OpenClaw agents to drive the workflow**.
 
